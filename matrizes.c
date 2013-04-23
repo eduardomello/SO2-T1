@@ -23,9 +23,9 @@ void leMatriz(void)
         printf("%c", c);                 //imprime o caracter lido 
         fclose(arquivo1);
         return; */
-        //printf("Vai ver a linha \n");
         linhas = leLinha(arquivo1);
-      //  colunas = leColuna(arquivo1)
+        colunas = leColuna(arquivo1);
+        //le a matriz...
         fclose ( arquivo1 );
 
     }
@@ -35,14 +35,33 @@ int leLinha(FILE *arquivo){
 
     char n[12];
     int linha;
+    rewind(arquivo); // garante que a posicao corrente do arquivo é o inicio dele
     fgets(n, 11, arquivo);
-    //printf("%c\n", n[9]);
+    printf("Numero de linhas: %c\n", n[9]);
     linha =  n[9] - '0'; //converte o char para int
     return linha;
 }
 
-int leColuna(){
-
+int leColuna(FILE *arquivo){
+    
+    int test;
+    rewind(arquivo); // garante que a posicao corrente do arquivo é o inicio dele
+    test = fseek (arquivo, 11, SEEK_CUR);
+    if (test == 0)
+    {
+        char n[13];
+        int coluna;
+        fgets(n, 13, arquivo);
+        printf("Numero de Colunas: %c \n", n[10]);
+        coluna =  n[10] - '0'; //converte o char para int
+        return coluna; 
+    }
+    else
+    {
+        printf("fseek falhou \n");
+        exit(0);
+    }
+    
 }
 
 void escreveMatriz(void){
