@@ -3,11 +3,24 @@
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <sys/mman.h>
+#include <fcntl.h>
 
 #define ARRAY_SIZE 128
 
-int arr[4][ARRAY_SIZE][ARRAY_SIZE]; // arr[0] = in1, arr[1] = in2, arr[2] = resultado, arr[3] = separação de processos
-int arr_size[3][2];
+
+
+struct region {
+	int arr[4][ARRAY_SIZE][ARRAY_SIZE]; // shared->arr[0] = in1, shared->arr[1] = in2, shared->arr[2] = resultado, shared->arr[3] = separação de processos
+	int arr_size[3][2];
+};
+struct region *shared;
+int fd;
+
+
+
+
+
 
 double time_diff(struct timeval x , struct timeval y)
 {
@@ -22,28 +35,44 @@ double time_diff(struct timeval x , struct timeval y)
 
 }
 
+void print_result()
+{
+	int i, j;
+	
+	printf("Snapshot do Resultado \n");
+
+	for(i = 0; i < shared->arr_size[2][0]; i++)
+	{
+		printf("\n");		
+		for(j = 0; j < shared->arr_size[2][1]; j++)
+		 	printf("%d ", shared->arr[2][i][j]);	
+	}
+	printf("\n\n");
+}
+
 
 void multiply(int i, int j)
 {		
 	int k, soma;
 	soma = 0;
-	for(k = 0; k < arr_size[0][1]; k++){
-		soma = soma + arr[0][i][k] * arr[1][k][j];	
+	for(k = 0; k < shared->arr_size[0][1]; k++){
+		soma = soma + shared->arr[0][i][k] * shared->arr[1][k][j];	
 	}
-	arr[2][i][j] = soma;	
+	shared->arr[2][i][j] = soma;	
+	
 }
 
 void worker(int id)
 {		
 	
 	int i, j, k, soma;
-	for(i = 0; i < arr_size[2][0]; i++)
+	for(i = 0; i < shared->arr_size[2][0]; i++)
 	{		
-		for(j = 0; j < arr_size[2][0]; j++)
+		for(j = 0; j < shared->arr_size[2][0]; j++)
 		{
-			if(arr[3][i][j] == id)
+			if(shared->arr[3][i][j] == id)
 			{					
-				multiply(i, j);										
+				multiply(i,j);
 			}
 		}
 	}
@@ -69,11 +98,25 @@ int main(int argc, char *argv[]){
 
 	FILE *arquivo;	
 
+	// Gera shared memory
+
+	fd = shm_open("/myregion", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+	if(fd == -1) printf("Erro em shm_open!\n");
+
+	if(ftruncate(fd, sizeof(struct region)) == -1) printf("truncou!\n");
+
+	// Mapeia o objeto na memoria compartilhada
+
+	shared = mmap(NULL, sizeof(struct region), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	if (shared == MAP_FAILED) printf("falhou mapeamento!\n");
+
+
+
 	// Verifica parametros 
 
 	if (argc < 2){
 		printf("\n --- Você precisa informar o numero de processos/threads! --- \n \n");
-		printf("       Ex: ./main_unix 4 \n \n");
+		printf("       Ex: ./process 4 \n \n");
 		exit(0);
 	}
 	
@@ -81,7 +124,7 @@ int main(int argc, char *argv[]){
 			
 	
 	/************************************
-			  PRIMEIRO ARRAY
+			  PRIMEIRO shared->arrAY
 	 ************************************/
 	// Le primeira matriz
 	arquivo = fopen("in1.txt", "r"); 
@@ -92,14 +135,14 @@ int main(int argc, char *argv[]){
 		exit(0);       
 	}
    
-    // Le tamanho do primeiro array
-	fscanf(arquivo, "%s = %d", &buffer, &arr_size[0][0]);
-	fscanf(arquivo, "%s = %d", &buffer, &arr_size[0][1]);
+    // Le tamanho do primeiro shared->array
+	fscanf(arquivo, "%s = %d", &buffer, &shared->arr_size[0][0]);
+	fscanf(arquivo, "%s = %d", &buffer, &shared->arr_size[0][1]);
 	
-	// Le valores do primeiro array
-	for(i = 0; i < arr_size[0][0]; i++)
-		for(j = 0; j < arr_size[0][1]; j++)
-			fscanf(arquivo, "%d", &arr[0][i][j]);
+	// Le valores do primeiro shared->array
+	for(i = 0; i < shared->arr_size[0][0]; i++)
+		for(j = 0; j < shared->arr_size[0][1]; j++)
+			fscanf(arquivo, "%d", &shared->arr[0][i][j]);
 
 
 	fclose(arquivo);
@@ -107,7 +150,7 @@ int main(int argc, char *argv[]){
 
 
 	/************************************
-			  SEGUNDO ARRAY
+			  SEGUNDO shared->arrAY
 	 ************************************/
 	// Le segunda matriz
 	arquivo = fopen("in2.txt", "r"); 
@@ -118,14 +161,14 @@ int main(int argc, char *argv[]){
 		exit(0);       
 	}
 
-    // Le tamanho do segundo array
-	fscanf(arquivo, "%s = %d", &buffer, &arr_size[1][0]);
-	fscanf(arquivo, "%s = %d", &buffer, &arr_size[1][1]);
+    // Le tamanho do segundo shared->array
+	fscanf(arquivo, "%s = %d", &buffer, &shared->arr_size[1][0]);
+	fscanf(arquivo, "%s = %d", &buffer, &shared->arr_size[1][1]);
 	
-	// Le valores do segundo array
-	for(i = 0; i < arr_size[1][0]; i++)
-		for(j = 0; j < arr_size[1][1]; j++)
-			fscanf(arquivo, "%d", &arr[1][i][j]);
+	// Le valores do segundo shared->array
+	for(i = 0; i < shared->arr_size[1][0]; i++)
+		for(j = 0; j < shared->arr_size[1][1]; j++)
+			fscanf(arquivo, "%d", &shared->arr[1][i][j]);
 
 
 
@@ -140,26 +183,26 @@ int main(int argc, char *argv[]){
 	****************************************/
 
 	// Verifica se é possivel multiplicar as matrizes
-	if(arr_size[0][1] != arr_size[1][0])
+	if(shared->arr_size[0][1] != shared->arr_size[1][0])
 	{
 		printf("Matrizes inconpátiveis!\n");
 		exit(0);
 	}
 
 	// define tamanho da matriz resultante
-	arr_size[2][0] = arr_size[0][1];
-	arr_size[2][1] = arr_size[0][1];
+	shared->arr_size[2][0] = shared->arr_size[0][1];
+	shared->arr_size[2][1] = shared->arr_size[0][1];
 	
 	// verificação de numero de processos
 	// utiliza uma matriz que indica qual linha cada processo fica responsável
 
 	current_proc = 0;
-	for(i = 0; i < arr_size[2][0]; i++)
+	for(i = 0; i < shared->arr_size[2][0]; i++)
 	{	
-		for(j = 0; j < arr_size[2][1]; j++)
+		for(j = 0; j < shared->arr_size[2][1]; j++)
 		{
 			if(current_proc == total_proc) current_proc = 0;
-			arr[3][i][j] = current_proc;
+			shared->arr[3][i][j] = current_proc;
 			current_proc++;
 		}
 	}
@@ -172,6 +215,7 @@ int main(int argc, char *argv[]){
 
 	for(exec = 0; exec < 10; exec++)
 	{
+		
 		gettimeofday(&t1, NULL);
 
 		// Cria processos filhos
@@ -181,10 +225,11 @@ int main(int argc, char *argv[]){
 			if(pid == 0)
 			{		
 				worker(aux);
+				
 				exit(0);
-			}		
+			}	
+			
 		}
-	
 		
 		// Espera filhos terminarem
 		counter = total_proc;
@@ -194,11 +239,14 @@ int main(int argc, char *argv[]){
 			exit_pid = wait(&status);			
 			--counter;
 		}
-
+	
 		gettimeofday(&t2, NULL);
+
+		
 
 		double total_time = time_diff(t1, t2);
 		printf("EXECUÇÃO %d: %lfms\n", (exec +1), total_time);
+		
 		
 	}
 	
@@ -206,18 +254,22 @@ int main(int argc, char *argv[]){
 	/****************************************
 			GRAVA MATRIZ RESULTANTE
 	****************************************/
-
+	
 	arquivo = fopen("out.txt", "w");
 
-	fprintf(arquivo, "LINHAS = %d\n", arr_size[2][0]);		
-	fprintf(arquivo, "COLUNAS = %d", arr_size[2][1]);
+	fprintf(arquivo, "LINHAS = %d\n", shared->arr_size[2][0]);		
+	fprintf(arquivo, "COLUNAS = %d", shared->arr_size[2][1]);
 
-	for(i = 0; i < arr_size[1][0]; i++)
+	for(i = 0; i < shared->arr_size[2][0]; i++)
 	{
-		fprintf(arquivo, "\n");
-		for(j = 0; j < arr_size[1][1]; j++)
-			fprintf(arquivo, "%d ", arr[2][i][j]);
+		fprintf(arquivo, "\n");		
+		for(j = 0; j < shared->arr_size[2][1]; j++)
+			fprintf(arquivo, "%d ", shared->arr[2][i][j]);	
 	}
+
+	shm_unlink("/myregion");
+
+	fclose(arquivo);
 
 	return;
 }

@@ -198,19 +198,22 @@ int main(int argc, char *argv[]){
 	}
 	
 	/****************************************
-			IMPRIME MATRIZ RESULTANTE
-	****************************************/	
+			GRAVA MATRIZ RESULTANTE
+	****************************************/
+	
 	arquivo = fopen("out.txt", "w");
 
 	fprintf(arquivo, "LINHAS = %d\n", arr_size[2][0]);		
 	fprintf(arquivo, "COLUNAS = %d", arr_size[2][1]);
 
-	for(i = 0; i < arr_size[1][0]; i++)
+	for(i = 0; i < arr_size[2][0]; i++)
 	{
-		fprintf(arquivo, "\n");
-		for(j = 0; j < arr_size[1][1]; j++)
-			fprintf(arquivo, "%d ", arr[2][i][j]);
+		fprintf(arquivo, "\n");		
+		for(j = 0; j < arr_size[2][1]; j++)
+			fprintf(arquivo, "%d ", arr[2][i][j]);	
 	}
+
+	fclose(arquivo);
 
 	return;
 }

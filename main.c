@@ -36,12 +36,12 @@ int main(int argc, char *argv[]){
 
 	if (argc < 2){
 		printf("\n --- Você precisa informar o numero de processos/threads! --- \n \n");
-		printf("       Ex: ./teste 4 \n \n");
+		printf("       Ex: ./main 4 \n \n");
 		exit(0);
 	}
 	
 	int n = atoi(argv[1]); //numero de processos ou threads
-	printf("\n --- O programa será executado com %d processos/threads --- \n \n", n);		
+	
 		
 	
 	
@@ -69,15 +69,7 @@ int main(int argc, char *argv[]){
 			fscanf(arquivo, "%d", &arr[0][i][j]);
 
 
-	// DEBUG: Imprime na tela
-	// EXCLUIR ANTES DE ENTREGAR
-	printf("\nArray 1 [%d][%d]\n", arr_size[0][0], arr_size[0][1]);
-	for(i = 0; i < arr_size[0][0]; i++)
-	{
-		printf("\n");
-		for(j = 0; j < arr_size[0][1]; j++)
-			printf("%d ", arr[0][i][j]);
-	}
+	
 
 	/************************************
 			  SEGUNDO ARRAY
@@ -103,15 +95,7 @@ int main(int argc, char *argv[]){
 			fscanf(arquivo, "%d", &arr[1][i][j]);
 
 
-	// DEBUG: Imprime na tela
-	// EXCLUIR ANTES DE ENTREGAR
-	printf("\nArray 2 [%d][%d]\n", arr_size[1][0], arr_size[1][1]);
-	for(i = 0; i < arr_size[1][0]; i++)
-	{
-		printf("\n");
-		for(j = 0; j < arr_size[1][1]; j++)
-			printf("%d ", arr[1][i][j]);
-	}
+	
 
 
 
@@ -126,13 +110,16 @@ int main(int argc, char *argv[]){
 		exit(0);
 	}
 
+	// tamanho da matriz resultante
+	arr_size[2][0] = arr_size[0][1];
+	arr_size[2][1] = arr_size[0][1];
+
 	aux = 0; 
 
 	// Multiplica matrizes
 	for(t = 0; t < 10; t++)
 	{
-		printf("------Execução %d\n", t);
-
+		
 		gettimeofday(&time_begin, NULL);
 		for(i = 0; i < arr_size[0][0]; i++){
 			for(j = 0; j < arr_size[1][1]; j++){
@@ -146,18 +133,25 @@ int main(int argc, char *argv[]){
 		gettimeofday(&time_end, NULL);
 		total_time = time_diff(time_begin, time_end);
 
-		printf("TEMPO %lfms\n", total_time);
+		printf("Execução %d: %lfms\n", t, total_time);
 	}
-	// DEBUG: Imprime na tela
-	// EXCLUIR ANTES DE ENTREGAR
-	printf("\nMatriz Resultante\n");
-	for(i = 0; i < arr_size[1][0]; i++)
-	{
-		printf("\n");
-		for(j = 0; j < arr_size[1][1]; j++)
-			printf("%d ", arr[2][i][j]);
-	}
+	/****************************************
+			GRAVA MATRIZ RESULTANTE
+	****************************************/
 	
+	arquivo = fopen("out.txt", "w");
+
+	fprintf(arquivo, "LINHAS = %d\n", arr_size[2][0]);		
+	fprintf(arquivo, "COLUNAS = %d", arr_size[2][1]);
+
+	for(i = 0; i < arr_size[2][0]; i++)
+	{
+		fprintf(arquivo, "\n");		
+		for(j = 0; j < arr_size[2][1]; j++)
+			fprintf(arquivo, "%d ", arr[2][i][j]);	
+	}
+
+	fclose(arquivo);
 
 	return;
 }
