@@ -7,4 +7,4 @@
  - Aplicação: Processos UNIX
  - Aplicação: pthreads
  - Execução de testes (implementação do timer)
- - Relatório
+ - Relatório do trabalho
