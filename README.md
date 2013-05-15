@@ -8,5 +8,3 @@
  - Aplicação: pthreads
  - Execução de testes (implementação do timer)
  - Relatório
-
- oi
